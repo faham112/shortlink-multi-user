@@ -1,0 +1,14 @@
+RewriteEngine On
+
+# Protect .env
+<FilesMatch "^\.env">
+    Require all denied
+</FilesMatch>
+
+# If someone visits root, go to login (backup)
+DirectoryIndex index.php login.php
+
+# Clean short links
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^([a-zA-Z0-9]+)$ redirect.php?code=$1 [L,QSA]
