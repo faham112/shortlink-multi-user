@@ -9,7 +9,6 @@ $admin_id = $_SESSION['user_id'];
 $host = $_SERVER['HTTP_HOST'];
 $tab = $_GET['tab'] ?? 'home';
 
-// CREATE / UPDATE LINK
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_link') {
     $long_url = trim($_POST['long_url'] ?? '');
     $title = trim($_POST['title'] ?? '');
@@ -17,7 +16,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $description = trim($_POST['description'] ?? '');
     $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 
-    // Image Upload from Gallery
     if (!empty($_FILES['image_file']['name'])) {
         $uploadDir = __DIR__ . '/uploads/';
         if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
@@ -37,7 +35,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $is_error = true;
     } else {
         if (!preg_match("~^(?:f|ht)tps?://~i", $long_url)) $long_url = "https://" . $long_url;
-
         if ($id > 0) {
             $stmt = $pdo->prepare("UPDATE urls SET long_url=?, title=?, image_url=?, description=? WHERE id=? AND user_id=?");
             $stmt->execute([$long_url, $title ?: null, $image_url ?: null, $description ?: null, $id, $admin_id]);
@@ -63,12 +60,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// CREATE USER
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'create_user') {
     $name = trim($_POST['name'] ?? '');
     $email = trim($_POST['email'] ?? '');
     $pass = $_POST['password'] ?? '';
-
     if (empty($name) || empty($email) || empty($pass)) {
         $message = "Sab fields zaroori hain";
         $is_error = true;
@@ -89,10 +84,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Delete User
 if (isset($_GET['delete_user'])) {
     $id = (int)$_GET['delete_user'];
     if ($id != $admin_id) {
+        try { $pdo->prepare("DELETE FROM clicks WHERE url_id IN (SELECT id FROM urls WHERE user_id = ?)")->execute([$id]); } catch (Exception $e) {}
         $pdo->prepare("DELETE FROM urls WHERE user_id = ?")->execute([$id]);
         $pdo->prepare("DELETE FROM users WHERE id = ? AND role = 'user'")->execute([$id]);
     }
@@ -100,15 +95,14 @@ if (isset($_GET['delete_user'])) {
     exit;
 }
 
-// Delete Link
 if (isset($_GET['delete_link'])) {
     $id = (int)$_GET['delete_link'];
+    try { $pdo->prepare("DELETE FROM clicks WHERE url_id = ?")->execute([$id]); } catch (Exception $e) {}
     $pdo->prepare("DELETE FROM urls WHERE id = ?")->execute([$id]);
     header("Location: admin.php?tab=links&msg=deleted");
     exit;
 }
 
-// Load edit
 if (isset($_GET['edit'])) {
     $stmt = $pdo->prepare("SELECT * FROM urls WHERE id = ? AND user_id = ?");
     $stmt->execute([(int)$_GET['edit'], $admin_id]);
@@ -116,18 +110,14 @@ if (isset($_GET['edit'])) {
     $tab = 'create';
 }
 
-// Stats
 $totalUsers = $pdo->query("SELECT COUNT(*) FROM users WHERE role = 'user'")->fetchColumn();
 $totalLinks = $pdo->query("SELECT COUNT(*) FROM urls")->fetchColumn();
 $totalClicks = $pdo->query("SELECT COALESCE(SUM(clicks),0) FROM urls")->fetchColumn();
 $myLinksCount = $pdo->prepare("SELECT COUNT(*) FROM urls WHERE user_id = ?");
 $myLinksCount->execute([$admin_id]);
 $myLinksCount = $myLinksCount->fetchColumn();
-
-// Users
 $users = $pdo->query("SELECT u.*, (SELECT COUNT(*) FROM urls WHERE user_id = u.id) as link_count FROM users u WHERE role = 'user' ORDER BY id DESC")->fetchAll();
 
-// Links
 $search = trim($_GET['search'] ?? '');
 if ($tab === 'links' || $tab === 'create') {
     if ($search && $tab === 'links') {
@@ -157,7 +147,9 @@ $myLinksData = $myLinksData->fetchAll();
         body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #0f0a1f; color: #e2e8f0; min-height: 100vh; padding-bottom: 90px; }
         .header { background: rgba(76, 29, 149, 0.5); backdrop-filter: blur(16px); border-bottom: 1px solid rgba(167, 139, 250, 0.2); padding: 14px 18px; position: sticky; top: 0; z-index: 50; display: flex; justify-content: space-between; align-items: center; }
         .header h1 { font-size: 19px; color: #e9d5ff; }
+        .header-right { display: flex; align-items: center; gap: 10px; }
         .badge { background: #7c3aed; color: white; font-size: 11px; padding: 3px 10px; border-radius: 20px; }
+        .btn-logout { background: rgba(248, 113, 113, 0.15); color: #f87171; border: 1px solid rgba(248, 113, 113, 0.3); padding: 6px 12px; border-radius: 10px; font-size: 12px; font-weight: 600; text-decoration: none; }
         .container { max-width: 700px; margin: 0 auto; padding: 16px; }
         .stats { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 18px; }
         .stat-card { background: rgba(255,255,255,0.05); border: 1px solid rgba(167, 139, 250, 0.15); border-radius: 16px; padding: 16px; text-align: center; }
@@ -205,7 +197,10 @@ $myLinksData = $myLinksData->fetchAll();
 <body>
     <div class="header">
         <h1>Admin Panel</h1>
-        <span class="badge">Admin</span>
+        <div class="header-right">
+            <span class="badge">Admin</span>
+            <a href="logout.php" class="btn-logout">Logout</a>
+        </div>
     </div>
 
     <div class="container">
@@ -221,7 +216,6 @@ $myLinksData = $myLinksData->fetchAll();
             <div class="msg <?= $is_error ? 'error' : '' ?>"><?= htmlspecialchars($message) ?></div>
         <?php endif; ?>
 
-        <!-- HOME -->
         <div class="card <?= ($tab === 'home' || !isset($_GET['tab'])) ? 'active' : '' ?>">
             <h2>Dashboard Overview</h2>
             <div class="stats">
@@ -233,7 +227,6 @@ $myLinksData = $myLinksData->fetchAll();
             <p style="color:#94a3b8;font-size:13px;text-align:center;margin-top:10px;">Welcome, <?= htmlspecialchars($_SESSION['name']) ?></p>
         </div>
 
-        <!-- CREATE -->
         <div class="card <?= $tab === 'create' ? 'active' : '' ?>">
             <h2><?= $edit_data ? 'Edit Link' : 'Create Short Link' ?></h2>
             <form method="POST" enctype="multipart/form-data">
@@ -267,7 +260,6 @@ $myLinksData = $myLinksData->fetchAll();
             <?php endif; ?>
         </div>
 
-        <!-- USERS -->
         <div class="card <?= $tab === 'users' ? 'active' : '' ?>">
             <h2>Create New User</h2>
             <form method="POST">
@@ -294,7 +286,6 @@ $myLinksData = $myLinksData->fetchAll();
             <?php endif; ?>
         </div>
 
-        <!-- ALL LINKS -->
         <div class="card <?= $tab === 'links' ? 'active' : '' ?>">
             <h2>All Links</h2>
             <form method="GET" class="search-bar">
@@ -336,10 +327,6 @@ $myLinksData = $myLinksData->fetchAll();
         <a href="admin.php?tab=links" class="nav-item <?= $tab === 'links' ? 'active' : '' ?>">
             <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1"/></svg>
             Links
-        </a>
-        <a href="logout.php" class="nav-item">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"/></svg>
-            Logout
         </a>
     </nav>
 
