@@ -29,6 +29,25 @@ CREATE TABLE IF NOT EXISTS `urls` (
   KEY `user_id` (`user_id`)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+CREATE TABLE IF NOT EXISTS `clicks` (
+  `id` int(11) NOT NULL AUTO_INCREMENT,
+  `url_id` int(11) NOT NULL,
+  `ip` varchar(45) DEFAULT NULL,
+  `user_agent` text DEFAULT NULL,
+  `referer` text DEFAULT NULL,
+  `country` varchar(100) DEFAULT NULL,
+  `city` varchar(100) DEFAULT NULL,
+  `device` varchar(50) DEFAULT NULL,
+  `browser` varchar(50) DEFAULT NULL,
+  `os` varchar(50) DEFAULT NULL,
+  `is_bot` tinyint(1) NOT NULL DEFAULT 0,
+  `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  PRIMARY KEY (`id`),
+  KEY `url_id` (`url_id`),
+  KEY `created_at` (`created_at`),
+  KEY `is_bot` (`is_bot`)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
 -- Default Admin Account
 -- Email: admin@link666xx.com
 -- Password: admin123
