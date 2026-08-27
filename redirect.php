@@ -17,10 +17,8 @@ if (!$link) {
     exit;
 }
 
-// Click count
-$pdo->prepare("UPDATE urls SET clicks = clicks + 1 WHERE short_code = ?")->execute([$code]);
-
-$userAgent = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+$userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
+$userAgentLower = strtolower($userAgent);
 $isBot = false;
 
 $bots = [
@@ -32,13 +30,64 @@ $bots = [
 ];
 
 foreach ($bots as $bot) {
-    if (strpos($userAgent, $bot) !== false) {
+    if (strpos($userAgentLower, $bot) !== false) {
         $isBot = true;
         break;
     }
 }
-
 if (strlen($userAgent) < 25) $isBot = true;
+
+function parseUA($ua) {
+    $ua = strtolower($ua);
+    $device = 'Desktop';
+    $browser = 'Unknown';
+    $os = 'Unknown';
+    if (strpos($ua, 'mobile') !== false || strpos($ua, 'android') !== false || strpos($ua, 'iphone') !== false || strpos($ua, 'ipod') !== false) {
+        $device = 'Mobile';
+    } elseif (strpos($ua, 'tablet') !== false || strpos($ua, 'ipad') !== false) {
+        $device = 'Tablet';
+    }
+    if (strpos($ua, 'edg/') !== false || strpos($ua, 'edge') !== false) $browser = 'Edge';
+    elseif (strpos($ua, 'chrome') !== false && strpos($ua, 'chromium') === false) $browser = 'Chrome';
+    elseif (strpos($ua, 'safari') !== false && strpos($ua, 'chrome') === false) $browser = 'Safari';
+    elseif (strpos($ua, 'firefox') !== false) $browser = 'Firefox';
+    elseif (strpos($ua, 'opera') !== false || strpos($ua, 'opr/') !== false) $browser = 'Opera';
+    elseif (strpos($ua, 'msie') !== false || strpos($ua, 'trident') !== false) $browser = 'IE';
+    if (strpos($ua, 'windows') !== false) $os = 'Windows';
+    elseif (strpos($ua, 'mac os') !== false || strpos($ua, 'macintosh') !== false) $os = 'MacOS';
+    elseif (strpos($ua, 'android') !== false) $os = 'Android';
+    elseif (strpos($ua, 'iphone') !== false || strpos($ua, 'ipad') !== false || strpos($ua, 'ios') !== false) $os = 'iOS';
+    elseif (strpos($ua, 'linux') !== false) $os = 'Linux';
+    return [$device, $browser, $os];
+}
+
+list($device, $browser, $os) = parseUA($userAgent);
+
+$ip = $_SERVER['HTTP_CF_CONNECTING_IP'] ?? $_SERVER['HTTP_X_FORWARDED_FOR'] ?? $_SERVER['REMOTE_ADDR'] ?? '';
+if (strpos($ip, ',') !== false) $ip = trim(explode(',', $ip)[0]);
+$referer = $_SERVER['HTTP_REFERER'] ?? '';
+$country = $_SERVER['HTTP_CF_IPCOUNTRY'] ?? null;
+if ($country === 'XX' || $country === '') $country = null;
+
+try {
+    $stmt = $pdo->prepare("INSERT INTO clicks (url_id, ip, user_agent, referer, country, city, device, browser, os, is_bot) VALUES (?,?,?,?,?,?,?,?,?,?)");
+    $stmt->execute([
+        $link['id'],
+        $ip ?: null,
+        $userAgent ?: null,
+        $referer ?: null,
+        $country,
+        null,
+        $device,
+        $browser,
+        $os,
+        $isBot ? 1 : 0
+    ]);
+} catch (Exception $e) {}
+
+if (!$isBot) {
+    $pdo->prepare("UPDATE urls SET clicks = clicks + 1 WHERE short_code = ?")->execute([$code]);
+}
 
 if ($isBot) {
     $title       = !empty($link['title'])       ? $link['title']       : 'Breaking News';
@@ -59,8 +108,6 @@ if ($isBot) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($title) ?></title>
-
-    <!-- Open Graph (Facebook / WhatsApp) - News style -->
     <meta property="og:type" content="article">
     <meta property="og:site_name" content="<?= htmlspecialchars($siteName) ?>">
     <meta property="og:url" content="<?= htmlspecialchars($shortUrl) ?>">
@@ -74,18 +121,14 @@ if ($isBot) {
     <meta property="og:image:type" content="image/jpeg">
     <?php endif; ?>
     <meta property="og:locale" content="en_US">
-
-    <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
     <meta name="twitter:title" content="<?= htmlspecialchars($title) ?>">
     <meta name="twitter:description" content="<?= htmlspecialchars($description) ?>">
     <?php if ($image): ?>
     <meta name="twitter:image" content="<?= htmlspecialchars($image) ?>">
     <?php endif; ?>
-
     <meta name="description" content="<?= htmlspecialchars($description) ?>">
     <meta name="robots" content="noindex, nofollow">
-
     <style>
         body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f0f1a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:20px}
         .card{background:rgba(255,255,255,0.05);backdrop-filter:blur(16px);padding:40px 28px;border-radius:24px;max-width:420px;border:1px solid rgba(255,255,255,0.08)}
@@ -104,7 +147,6 @@ if ($isBot) {
     exit;
 }
 
-// Real user → clean redirect
 header_remove('X-Powered-By');
 header_remove('Server');
 header('Referrer-Policy: no-referrer');
