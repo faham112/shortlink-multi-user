@@ -17,6 +17,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     $description = trim($_POST['description'] ?? '');
     $id = isset($_POST['id']) ? (int)$_POST['id'] : 0;
 
+    // Image Upload from Gallery
+    if (!empty($_FILES['image_file']['name'])) {
+        $uploadDir = __DIR__ . '/uploads/';
+        if (!is_dir($uploadDir)) mkdir($uploadDir, 0755, true);
+        $ext = strtolower(pathinfo($_FILES['image_file']['name'], PATHINFO_EXTENSION));
+        $allowed = ['jpg', 'jpeg', 'png', 'webp', 'gif'];
+        if (in_array($ext, $allowed) && $_FILES['image_file']['size'] < 5 * 1024 * 1024) {
+            $newName = 'img_' . time() . '_' . bin2hex(random_bytes(4)) . '.' . $ext;
+            $target = $uploadDir . $newName;
+            if (move_uploaded_file($_FILES['image_file']['tmp_name'], $target)) {
+                $image_url = 'https://' . $_SERVER['HTTP_HOST'] . '/uploads/' . $newName;
+            }
+        }
+    }
+
     if (empty($long_url)) {
         $message = "Destination URL required!";
         $is_error = true;
@@ -183,6 +198,8 @@ $myLinksData = $myLinksData->fetchAll();
         .nav-item { display: flex; flex-direction: column; align-items: center; text-decoration: none; color: #94a3b8; font-size: 11px; gap: 3px; padding: 8px 12px; border-radius: 14px; transition: all 0.2s; min-width: 60px; }
         .nav-item.active { color: #e9d5ff; background: rgba(124, 58, 237, 0.4); box-shadow: 0 0 12px rgba(124, 58, 237, 0.3); }
         .nav-item svg { width: 22px; height: 22px; }
+        .file-label { font-size: 13px; color: #c4b5fd; display: block; margin-bottom: 6px; }
+        .file-input { padding: 10px; background: rgba(15,10,31,0.6); border: 1px solid rgba(167,139,250,0.2); border-radius: 12px; color: #e2e8f0; width: 100%; margin-bottom: 10px; }
     </style>
 </head>
 <body>
@@ -219,13 +236,18 @@ $myLinksData = $myLinksData->fetchAll();
         <!-- CREATE -->
         <div class="card <?= $tab === 'create' ? 'active' : '' ?>">
             <h2><?= $edit_data ? 'Edit Link' : 'Create Short Link' ?></h2>
-            <form method="POST">
+            <form method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="action" value="create_link">
                 <?php if ($edit_data): ?><input type="hidden" name="id" value="<?= $edit_data['id'] ?>"><?php endif; ?>
                 <input type="text" name="long_url" placeholder="Destination URL" required value="<?= htmlspecialchars($edit_data['long_url'] ?? '') ?>">
-                <input type="text" name="title" placeholder="Title (Optional)" value="<?= htmlspecialchars($edit_data['title'] ?? '') ?>">
-                <input type="text" name="image_url" placeholder="Image URL (Optional)" value="<?= htmlspecialchars($edit_data['image_url'] ?? '') ?>">
-                <textarea name="description" placeholder="Description (Optional)"><?= htmlspecialchars($edit_data['description'] ?? '') ?></textarea>
+                <input type="text" name="title" placeholder="Title (News style)" value="<?= htmlspecialchars($edit_data['title'] ?? '') ?>">
+                <textarea name="description" placeholder="Description (News style)"><?= htmlspecialchars($edit_data['description'] ?? '') ?></textarea>
+                <label class="file-label">Preview Image (Gallery se upload)</label>
+                <input type="file" name="image_file" accept="image/*" class="file-input">
+                <?php if (!empty($edit_data['image_url'])): ?>
+                    <div style="margin-bottom:10px;font-size:12px;color:#94a3b8;">Current: <a href="<?= htmlspecialchars($edit_data['image_url']) ?>" target="_blank" style="color:#a78bfa;">View Image</a></div>
+                <?php endif; ?>
+                <input type="text" name="image_url" placeholder="Ya Image URL (Optional)" value="<?= htmlspecialchars($edit_data['image_url'] ?? '') ?>">
                 <button type="submit" class="btn-primary"><?= $edit_data ? 'Update Link' : 'Shorten Now' ?></button>
                 <?php if ($edit_data): ?><a href="admin.php?tab=create" class="cancel">Cancel Edit</a><?php endif; ?>
             </form>
