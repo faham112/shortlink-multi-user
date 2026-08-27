@@ -1,6 +1,6 @@
 # ShortLink - Multi User URL Shortener
 
-Modern Multi-User URL Shortener with Glassmorphism UI, Admin Panel, Link Masking for WhatsApp/Facebook, and Bottom Navigation.
+Modern Multi-User URL Shortener with Glassmorphism UI, Admin Panel, **Fully Masked Links** (looks like News Website on Facebook/WhatsApp), Gallery Image Upload, and Bottom Navigation.
 
 Built with pure PHP + MySQL (Hostinger ready).
 
@@ -9,11 +9,13 @@ Built with pure PHP + MySQL (Hostinger ready).
 - Single Login Form (Admin + User same form)
 - Admin Dashboard with Stats, Create Links, Manage Users, All Links
 - User Dashboard - Create & manage own short links
-- Full Link Masking (WhatsApp/Facebook shows only Title + Description + Image)
+- **Fully Masked System** – Facebook / WhatsApp / Telegram sees it as a News Website (title + description + big image)
+- **Gallery Image Upload** – Upload preview image directly from phone/gallery
 - Bottom Navigation (Mobile friendly)
 - Glassmorphism + Purple theme
 - Click counter, Search, Edit, Delete, Copy
 - Clean short URLs: `yourdomain.com/abc123`
+- Real destination URL never shown in any preview
 
 ## Default Admin Login
 
@@ -28,25 +30,28 @@ Built with pure PHP + MySQL (Hostinger ready).
 2. Create MySQL database
 3. Import `database.sql` in phpMyAdmin
 4. Copy `.env.example` to `.env` and fill your database credentials
-5. Open domain → Login page
+5. Make sure `uploads/` folder exists and has permission **755**
+6. Open domain → Login page
 
 ## Files
 
 ```
 index.php          → Redirects to login
 login.php          → Login page
-dashboard.php      → User dashboard
-admin.php          → Admin panel
-redirect.php       → Short link + Masking logic
+dashboard.php      → User dashboard (with image upload)
+admin.php          → Admin panel (with image upload)
+redirect.php       → Short link + Fully Masked logic
 config.php         → DB + Auth helpers
 logout.php
 .htaccess
 database.sql
 .env.example
+uploads/           → Uploaded preview images
 ```
 
-## How Masking Works
+## How Fully Masked Works
 
-- When WhatsApp / Facebook / Telegram opens the short link → Only Title + Description + Image is shown
-- When a real user clicks → Redirects to the real destination URL
-- Original long URL is never revealed in preview
+- When WhatsApp / Facebook / Telegram / Discord opens the short link → Shows only Title + Description + Image (looks like News article)
+- Real user click → Redirects to the real destination URL
+- Original long URL is never revealed in any preview
+- Image can be uploaded from gallery or given as URL
