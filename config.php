@@ -40,6 +40,39 @@ try {
     die("Database connection failed: " . $e->getMessage());
 }
 
+// Auto-migrate missing columns / tables
+try {
+    $cols = $pdo->query("SHOW COLUMNS FROM urls LIKE 'preview_enabled'")->fetch();
+    if (!$cols) {
+        $pdo->exec("ALTER TABLE urls ADD COLUMN preview_enabled TINYINT(1) NOT NULL DEFAULT 1 AFTER description");
+    }
+} catch (Exception $e) {}
+
+try {
+    $pdo->query("SELECT 1 FROM clicks LIMIT 1");
+} catch (Exception $e) {
+    try {
+        $pdo->exec("CREATE TABLE IF NOT EXISTS `clicks` (
+          `id` int(11) NOT NULL AUTO_INCREMENT,
+          `url_id` int(11) NOT NULL,
+          `ip` varchar(45) DEFAULT NULL,
+          `user_agent` text DEFAULT NULL,
+          `referer` text DEFAULT NULL,
+          `country` varchar(100) DEFAULT NULL,
+          `city` varchar(100) DEFAULT NULL,
+          `device` varchar(50) DEFAULT NULL,
+          `browser` varchar(50) DEFAULT NULL,
+          `os` varchar(50) DEFAULT NULL,
+          `is_bot` tinyint(1) NOT NULL DEFAULT 0,
+          `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          PRIMARY KEY (`id`),
+          KEY `url_id` (`url_id`),
+          KEY `created_at` (`created_at`),
+          KEY `is_bot` (`is_bot`)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci");
+    } catch (Exception $e2) {}
+}
+
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
