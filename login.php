@@ -6,6 +6,10 @@ if (isLoggedIn()) {
     exit;
 }
 
+// Change WhatsApp number here (country code, no +)
+$WHATSAPP_NUMBER = '923013250144';
+$CREDIT_NAME = 'Faham Baloch';
+
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -36,6 +40,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 }
+
+$waMsg = urlencode('Hi, I just visited your ShortLink tool.');
+$waLink = 'https://wa.me/' . preg_replace('/\D/', '', $WHATSAPP_NUMBER) . '?text=' . $waMsg;
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -43,6 +50,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Login - ShortLink</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body {
@@ -50,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             min-height: 100vh;
             background: linear-gradient(135deg, #4c1d95 0%, #7c3aed 50%, #a78bfa 100%);
             display: flex;
+            flex-direction: column;
             align-items: center;
             justify-content: center;
             padding: 20px;
@@ -107,6 +116,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             margin-bottom: 18px;
             text-align: center;
         }
+        .login-footer {
+            margin-top: 24px;
+            width: 100%;
+            max-width: 400px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            text-align: center;
+        }
+        .footer-brand {
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 12px;
+            color: rgba(255,255,255,0.75);
+            font-weight: 500;
+        }
+        .footer-brand .heart {
+            color: #f0abfc;
+            font-size: 11px;
+            animation: pulse-heart 1.4s ease-in-out infinite;
+        }
+        @keyframes pulse-heart {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.7; transform: scale(1.15); }
+        }
+        .footer-brand .name {
+            color: #fff;
+            font-weight: 600;
+        }
+        .footer-wa {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 6px 14px;
+            border-radius: 999px;
+            background: rgba(255,255,255,0.15);
+            border: 1px solid rgba(255,255,255,0.3);
+            color: #fff;
+            text-decoration: none;
+            font-size: 12px;
+            font-weight: 500;
+            transition: 0.2s;
+        }
+        .footer-wa:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: rgba(255,255,255,0.5);
+        }
+        .footer-wa i { font-size: 14px; }
     </style>
 </head>
 <body>
@@ -132,6 +191,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             </div>
             <button type="submit" class="btn">Login</button>
         </form>
+    </div>
+
+    <div class="login-footer">
+        <div class="footer-brand">
+            <span>Coded with</span>
+            <span class="heart">♥</span>
+            <span>by</span>
+            <span class="name"><?= htmlspecialchars($CREDIT_NAME) ?></span>
+        </div>
+        <a class="footer-wa" href="<?= htmlspecialchars($waLink) ?>" target="_blank" rel="noopener noreferrer">
+            <i class="fa-brands fa-whatsapp"></i>
+            <span>Contact us</span>
+        </a>
     </div>
 </body>
 </html>
