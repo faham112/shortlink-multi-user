@@ -89,18 +89,41 @@ if (!$isBot) {
     $pdo->prepare("UPDATE urls SET clicks = clicks + 1 WHERE short_code = ?")->execute([$code]);
 }
 
-if ($isBot) {
-    $title       = !empty($link['title'])       ? $link['title']       : 'Breaking News';
-    $description = !empty($link['description']) ? $link['description'] : 'Latest updates and full story';
-    $image       = !empty($link['image_url'])   ? $link['image_url']   : '';
-    $shortUrl    = 'https://' . $_SERVER['HTTP_HOST'] . '/' . $link['short_code'];
-    $siteName    = 'News Daily';
+// Preview on/off (default ON if column missing)
+$previewOn = true;
+if (isset($link['preview_enabled'])) {
+    $previewOn = ((int)$link['preview_enabled'] === 1);
+}
 
+if ($isBot) {
     header_remove('X-Powered-By');
     header_remove('Server');
     header('Content-Type: text/html; charset=utf-8');
     header('Referrer-Policy: no-referrer');
     header('Cache-Control: no-store, no-cache, must-revalidate');
+
+    // PREVIEW OFF → no title, no description, no image
+    if (!$previewOn) {
+        ?>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="robots" content="noindex, nofollow">
+    <title></title>
+</head>
+<body></body>
+</html>
+        <?php
+        exit;
+    }
+
+    // PREVIEW ON → full news-style OG
+    $title       = !empty($link['title'])       ? $link['title']       : 'Breaking News';
+    $description = !empty($link['description']) ? $link['description'] : 'Latest updates and full story';
+    $image       = !empty($link['image_url'])   ? $link['image_url']   : '';
+    $shortUrl    = 'https://' . $_SERVER['HTTP_HOST'] . '/' . $link['short_code'];
+    $siteName    = 'News Daily';
     ?>
 <!DOCTYPE html>
 <html lang="en">
