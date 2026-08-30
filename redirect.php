@@ -5,7 +5,7 @@ $code = $_GET['code'] ?? '';
 
 if (empty($code) || !preg_match('/^[a-zA-Z0-9]+$/', $code)) {
     http_response_code(404);
-    exit;
+    exit('Not found');
 }
 
 $stmt = $pdo->prepare("SELECT * FROM urls WHERE short_code = ? LIMIT 1");
@@ -14,7 +14,7 @@ $link = $stmt->fetch();
 
 if (!$link) {
     http_response_code(404);
-    exit;
+    exit('Not found');
 }
 
 $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? '';
@@ -26,7 +26,8 @@ $bots = [
     'linkedinbot', 'slackbot', 'discordbot', 'pinterest', 'googlebot', 'bingbot',
     'yandex', 'baiduspider', 'embedly', 'quora link preview', 'showyoubot',
     'outbrain', 'vkshare', 'redditbot', 'applebot', 'tumblr', 'skypeuripreview',
-    'viber', 'line', 'bot', 'crawler', 'spider', 'preview'
+    'viber', 'line', 'bot', 'crawler', 'spider', 'preview', 'facebookcatalog',
+    'meta-externalagent', 'meta-externalfetcher'
 ];
 
 foreach ($bots as $bot) {
@@ -86,44 +87,39 @@ try {
 } catch (Exception $e) {}
 
 if (!$isBot) {
-    $pdo->prepare("UPDATE urls SET clicks = clicks + 1 WHERE short_code = ?")->execute([$code]);
+    try {
+        $pdo->prepare("UPDATE urls SET clicks = clicks + 1 WHERE short_code = ?")->execute([$code]);
+    } catch (Exception $e) {}
 }
 
-// Preview on/off (default ON if column missing)
 $previewOn = true;
-if (isset($link['preview_enabled'])) {
+if (array_key_exists('preview_enabled', $link)) {
     $previewOn = ((int)$link['preview_enabled'] === 1);
 }
 
 if ($isBot) {
     header_remove('X-Powered-By');
     header_remove('Server');
-    header('Content-Type: text/html; charset=utf-8');
+    header('Cache-Control: no-store, no-cache, must-revalidate, max-age=0');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    header('X-Robots-Tag: noindex, nofollow, noarchive, nosnippet');
     header('Referrer-Policy: no-referrer');
-    header('Cache-Control: no-store, no-cache, must-revalidate');
 
-    // PREVIEW OFF → no title, no description, no image
     if (!$previewOn) {
-        ?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="robots" content="noindex, nofollow">
-    <title></title>
-</head>
-<body></body>
-</html>
-        <?php
+        header('Content-Type: text/html; charset=utf-8');
+        http_response_code(200);
+        echo '<!DOCTYPE html><html><head><meta charset="utf-8"><meta name="robots" content="noindex,nofollow,noarchive,nosnippet"><title></title></head><body></body></html>';
         exit;
     }
 
-    // PREVIEW ON → full news-style OG
     $title       = !empty($link['title'])       ? $link['title']       : 'Breaking News';
     $description = !empty($link['description']) ? $link['description'] : 'Latest updates and full story';
     $image       = !empty($link['image_url'])   ? $link['image_url']   : '';
     $shortUrl    = 'https://' . $_SERVER['HTTP_HOST'] . '/' . $link['short_code'];
     $siteName    = 'News Daily';
+
+    header('Content-Type: text/html; charset=utf-8');
     ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -141,7 +137,6 @@ if ($isBot) {
     <meta property="og:image:secure_url" content="<?= htmlspecialchars($image) ?>">
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:type" content="image/jpeg">
     <?php endif; ?>
     <meta property="og:locale" content="en_US">
     <meta name="twitter:card" content="summary_large_image">
@@ -152,18 +147,10 @@ if ($isBot) {
     <?php endif; ?>
     <meta name="description" content="<?= htmlspecialchars($description) ?>">
     <meta name="robots" content="noindex, nofollow">
-    <style>
-        body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:#0f0f1a;color:#e2e8f0;display:flex;align-items:center;justify-content:center;min-height:100vh;margin:0;text-align:center;padding:20px}
-        .card{background:rgba(255,255,255,0.05);backdrop-filter:blur(16px);padding:40px 28px;border-radius:24px;max-width:420px;border:1px solid rgba(255,255,255,0.08)}
-        h1{font-size:22px;margin:0 0 12px;font-weight:600}
-        p{color:#a5b4fc;font-size:15px;line-height:1.5;margin:0}
-    </style>
 </head>
 <body>
-    <div class="card">
-        <h1><?= htmlspecialchars($title) ?></h1>
-        <p><?= htmlspecialchars($description) ?></p>
-    </div>
+    <h1><?= htmlspecialchars($title) ?></h1>
+    <p><?= htmlspecialchars($description) ?></p>
 </body>
 </html>
     <?php
