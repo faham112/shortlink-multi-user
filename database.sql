@@ -22,6 +22,7 @@ CREATE TABLE IF NOT EXISTS `urls` (
   `title` varchar(255) DEFAULT NULL,
   `image_url` text DEFAULT NULL,
   `description` text DEFAULT NULL,
+  `preview_enabled` tinyint(1) NOT NULL DEFAULT 1,
   `clicks` int(11) NOT NULL DEFAULT 0,
   `created_at` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP,
   PRIMARY KEY (`id`),
